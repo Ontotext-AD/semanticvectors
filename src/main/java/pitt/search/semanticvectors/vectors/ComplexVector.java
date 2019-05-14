@@ -676,9 +676,20 @@ public class ComplexVector implements Vector {
 
   @Override
   /**
-   * Transforms vector to cartesian form and writes vector out in dense format.
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream) {
+    writeToLuceneStream(outputStream, new AtomicBoolean(false));
+  }
+
+  @Override
+  /**
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse. Introduced isCreationInterruptedByUser local variable based on which
+   * transaction is aborted.
+   */
+  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean isCreationInterruptedByUser) {
     toCartesian();
     for (int i = 0; i < dimension * 2; ++i) {
       try {
@@ -694,11 +705,10 @@ public class ComplexVector implements Vector {
    * Transforms vector to cartesian form and writes vector out in dense format, truncating the
    * vectors to the assigned dimensionality
    */
-  public void writeToLuceneStream(IndexOutput outputStream, int k, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream, int k) {
     toCartesian();
     for (int i = 0; i < k * 2; ++i) {
       try {
-        checkAbortedAndThrowExceptionIfNeeded(isCreationInterruptedByUser);
         outputStream.writeInt(Float.floatToIntBits(coordinates[i]));
       } catch (IOException e) {
         e.printStackTrace();

@@ -84,7 +84,11 @@ public class BuildIndex {
 		buildIndex(flagConfig);
 	}
 
-	public static boolean buildIndex(FlagConfig flagConfig, AtomicBoolean... creationInterruptedByUser) throws IOException {
+	public static boolean buildIndex(FlagConfig flagConfig) throws IOException {
+		return buildIndex(flagConfig, new AtomicBoolean(false));
+	}
+
+	public static boolean buildIndex(FlagConfig flagConfig, AtomicBoolean creationInterruptedByUser) throws IOException {
 		if (flagConfig.luceneindexpath().isEmpty()) {
 			throw (new IllegalArgumentException("-luceneindexpath must be set."));
 		}

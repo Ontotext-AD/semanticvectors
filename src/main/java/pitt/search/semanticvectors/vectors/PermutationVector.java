@@ -251,9 +251,20 @@ public class PermutationVector implements Vector {
 
   @Override
   /**
-   * Writes vector out in dense format.
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream) {
+    writeToLuceneStream(outputStream, new AtomicBoolean(false));
+  }
+
+  @Override
+  /**
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse. Introduced isCreationInterruptedByUser local variable based on which
+   * transaction is aborted.
+   */
+  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean isCreationInterruptedByUser) {
     int[] coordsToWrite;
     
       coordsToWrite = coordinates;
@@ -346,9 +357,9 @@ public Vector generateRandomVector(int dimension, int numEntries, Random random)
 }
 
 @Override
-public void writeToLuceneStream(IndexOutput outputStream, int k, AtomicBoolean... isCreationInterruptedByUser) {
+public void writeToLuceneStream(IndexOutput outputStream, int k) {
 	// TODO Auto-generated method stub
-	writeToLuceneStream(outputStream, isCreationInterruptedByUser);
+	writeToLuceneStream(outputStream);
 }
 
 

@@ -119,12 +119,17 @@ public interface Vector {
   /**
    * Writes vector to Lucene output stream.  Writes exactly {@link #getDimension} coordinates.
    */
-  public abstract void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean... isCreationInterruptedByUser);
+  public abstract void writeToLuceneStream(IndexOutput outputStream);
+
+  /**
+   * Writes vector to Lucene output stream.  Writes exactly {@link #getDimension} coordinates.
+   */
+  public abstract void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean isCreationInterruptedByUser);
   
   /**
    * Writes truncated vector to Lucene output stream.  Writes exactly k coordinates.
    */
-  public abstract void writeToLuceneStream(IndexOutput outputStream, int k, AtomicBoolean... isCreationInterruptedByUser);
+  public abstract void writeToLuceneStream(IndexOutput outputStream, int k);
 
   /**
    * Reads vector from Lucene input stream.  Reads exactly {@link #getDimension} coordinates.
@@ -150,8 +155,8 @@ public interface Vector {
   */
   public abstract String toString();
 
-  default void checkAbortedAndThrowExceptionIfNeeded(AtomicBoolean... isCreationInterruptedByUser) {
-    if (isCreationInterruptedByUser != null && isCreationInterruptedByUser.length > 0 && isCreationInterruptedByUser[0].get()) {
+  default void checkAbortedAndThrowExceptionIfNeeded(AtomicBoolean isCreationInterruptedByUser) {
+    if (isCreationInterruptedByUser.get()) {
       throw new QueryInterruptedException("Transaction was aborted by the user");
     }
   }

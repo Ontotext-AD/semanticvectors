@@ -76,13 +76,17 @@ public class VectorStoreWriter {
         + " -dimension " + Integer.toString(flagConfig.dimension());
   }
 
+  public static void writeVectors(String storeName, FlagConfig flagConfig, VectorStore objectVectors) throws IOException {
+    writeVectors(storeName, flagConfig, objectVectors, new AtomicBoolean(false));
+  }
+
   /**
    * Writes vectors in text or lucene format depending on {@link FlagConfig#indexfileformat}.
    * 
    * @param storeName The name of the vector store to write to
    * @param objectVectors The vector store to be written to disk
    */
-  public static void writeVectors(String storeName, FlagConfig flagConfig, VectorStore objectVectors, AtomicBoolean... isCreationInterruptedByUser)
+  public static void writeVectors(String storeName, FlagConfig flagConfig, VectorStore objectVectors, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     String vectorFileName = VectorStoreUtils.getStoreFileName(storeName, flagConfig);
     switch (flagConfig.indexfileformat()) {
@@ -97,13 +101,17 @@ public class VectorStoreWriter {
     }
   }
 
+  public static void writeVectorsInLuceneFormat(String vectorFileName, FlagConfig flagConfig, VectorStore objectVectors) throws IOException {
+    writeVectorsInLuceneFormat(vectorFileName, flagConfig, objectVectors, new AtomicBoolean(false));
+  }
+
   /**
    * Outputs a vector store in Lucene binary format.
    * 
    * @param vectorFileName The name of the file to write to
    * @param objectVectors The vector store to be written to disk
    */
-  public static void writeVectorsInLuceneFormat(String vectorFileName, FlagConfig flagConfig, VectorStore objectVectors, AtomicBoolean... isCreationInterruptedByUser)
+  public static void writeVectorsInLuceneFormat(String vectorFileName, FlagConfig flagConfig, VectorStore objectVectors, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     VerbatimLogger.info("About to write " + objectVectors.getNumVectors() + " vectors of dimension "
         + flagConfig.dimension() + " to Lucene format file: " + vectorFileName + " ... ");
@@ -135,12 +143,17 @@ public class VectorStoreWriter {
     }
   }
 
+  public static void writeToIndexOutput(VectorStore objectVectors, FlagConfig flagConfig, IndexOutput outputStream,
+                                        Map<String, Long> entityMap) throws IOException {
+    writeToIndexOutput(objectVectors, flagConfig, outputStream, entityMap, new AtomicBoolean(false));
+  }
+
   /**
    * Writes the object vectors to this Lucene output stream.
    * Caller is responsible for opening and closing stream output stream.
    */
   public static void writeToIndexOutput(VectorStore objectVectors, FlagConfig flagConfig, IndexOutput outputStream,
-                                        Map<String, Long> entityMap, AtomicBoolean... isCreationInterruptedByUser)
+                                        Map<String, Long> entityMap, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     // Write header giving vector type and dimension for all vectors.
     outputStream.writeString(generateHeaderString(flagConfig));
@@ -159,6 +172,11 @@ public class VectorStoreWriter {
     VerbatimLogger.info("finished writing vectors.\n");
   }
 
+  public static void writeVectorsInTextFormat(String vectorFileName, FlagConfig flagConfig,
+                                              VectorStore objectVectors) throws IOException {
+    writeVectorsInTextFormat(vectorFileName, flagConfig, objectVectors, new AtomicBoolean(false));
+  }
+
   /**
    * Outputs a vector store as a plain text file.
    * 
@@ -167,7 +185,7 @@ public class VectorStoreWriter {
    * @param objectVectors The vector store to be written to disk
    */
   public static void writeVectorsInTextFormat(String vectorFileName, FlagConfig flagConfig,
-                                              VectorStore objectVectors, AtomicBoolean... isCreationInterruptedByUser)
+                                              VectorStore objectVectors, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     VerbatimLogger.info("About to write " + objectVectors.getNumVectors() + " vectors of dimension "
         + flagConfig.dimension() + " to text file: " + vectorFileName + " ... ");
@@ -178,7 +196,12 @@ public class VectorStoreWriter {
   }
 
   public static void writeToTextBuffer(VectorStore objectVectors, FlagConfig flagConfig,
-                                       BufferedWriter outBuf, AtomicBoolean... isCreationInterruptedByUser)
+                                       BufferedWriter outBuf) throws IOException {
+    writeToTextBuffer(objectVectors, flagConfig, outBuf, new AtomicBoolean(false));
+  }
+
+  public static void writeToTextBuffer(VectorStore objectVectors, FlagConfig flagConfig,
+                                       BufferedWriter outBuf, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     Enumeration<ObjectVector> vecEnum = objectVectors.getAllVectors();
 
@@ -187,7 +210,7 @@ public class VectorStoreWriter {
 
     // Write each vector.
     while (vecEnum.hasMoreElements()) {
-      if (isCreationInterruptedByUser[0] != null && isCreationInterruptedByUser[0].get()) {
+      if (isCreationInterruptedByUser.get()) {
         throw new QueryInterruptedException("Transaction was aborted by the user");
       }
       ObjectVector objectVector = vecEnum.nextElement();

@@ -411,7 +411,17 @@ public class RealVector implements Vector {
    * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
    * that vector remains sparse.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream) {
+    writeToLuceneStream(outputStream, new AtomicBoolean(false));
+  }
+
+  @Override
+  /**
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse. Introduced isCreationInterruptedByUser local variable based on which
+   * transaction is aborted.
+   */
+  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean isCreationInterruptedByUser) {
     float[] coordsToWrite;
     if (isSparse) {
       RealVector copy = copy();
@@ -434,7 +444,7 @@ public class RealVector implements Vector {
    * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
    * that vector remains sparse. Truncates to length k.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, int k, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream, int k) {
     float[] coordsToWrite;
     if (isSparse) {
       RealVector copy = copy();
@@ -445,7 +455,6 @@ public class RealVector implements Vector {
     }
     for (int i = 0; i < k; ++i) {
       try {
-        checkAbortedAndThrowExceptionIfNeeded(isCreationInterruptedByUser);
         outputStream.writeInt(Float.floatToIntBits(coordsToWrite[i]));
       } catch (IOException e) {
         e.printStackTrace();

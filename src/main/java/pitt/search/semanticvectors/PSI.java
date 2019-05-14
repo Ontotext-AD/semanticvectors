@@ -91,20 +91,21 @@ public class PSI {
 	private volatile boolean interrupted = false;
 	private AtomicBoolean isCreationInterruptedByUser;
 
-
 	public PSI(FlagConfig flagConfig) {
-		predicatePermutation = PermutationUtils.getShiftPermutation(flagConfig.vectortype(), flagConfig.dimension(), 1);
+		this(flagConfig, new AtomicBoolean(false));
 	}
 
+	public PSI(FlagConfig flagConfig, AtomicBoolean isCreationInterruptedByUser) {
+		predicatePermutation = PermutationUtils.getShiftPermutation(flagConfig.vectortype(), flagConfig.dimension(), 1);
+		this.isCreationInterruptedByUser = isCreationInterruptedByUser;
+	}
 
 	/**
 	 * Creates PSI vectors incrementally, using the fields "subject" and "object" from a Lucene index.
 	 */
-	public boolean createIncrementalPSIVectors(FlagConfig flagConfig, AtomicBoolean... creationInterruptedByUser) throws IOException {
+	public boolean createIncrementalPSIVectors(FlagConfig flagConfig) throws IOException {
 		PSI incrementalPSIVectors = new PSI(flagConfig);
-		if (creationInterruptedByUser != null && creationInterruptedByUser.length > 0) {
-			incrementalPSIVectors.isCreationInterruptedByUser = creationInterruptedByUser[0];
-		}
+		incrementalPSIVectors.isCreationInterruptedByUser = this.isCreationInterruptedByUser;
 		incrementalPSIVectors.flagConfig = flagConfig;
 		incrementalPSIVectors.initialize();
 
@@ -317,7 +318,7 @@ public class PSI {
 			}
 
 			es.submit(() -> {
-				if (interrupted || this.isCreationInterruptedByUser != null && this.isCreationInterruptedByUser.get())
+				if (interrupted || this.isCreationInterruptedByUser.get())
 					return;
 
 				Thread.currentThread().setName("psi-index-builder");
@@ -414,7 +415,7 @@ public class PSI {
 				}
 			});
 
-			if (this.isCreationInterruptedByUser != null && this.isCreationInterruptedByUser.get()) {
+			if (this.isCreationInterruptedByUser.get()) {
 				shutdown();
 				throw new QueryInterruptedException("Transaction was aborted by the user");
 			}
@@ -471,7 +472,7 @@ public class PSI {
 		try {
 			es.awaitTermination(30, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
-//			throw new PluginException("Couldn't terminate process");
+			throw new PluginException("Couldn't terminate process");
 		}
 	}
 

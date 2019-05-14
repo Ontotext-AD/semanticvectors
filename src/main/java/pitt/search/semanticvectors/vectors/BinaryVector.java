@@ -783,9 +783,20 @@ public class BinaryVector implements Vector {
 
   @Override
   /**
-   * Writes vector out to object output stream.  Converts to dense format if necessary.
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream) {
+    writeToLuceneStream(outputStream, new AtomicBoolean(false));
+  }
+
+  @Override
+  /**
+   * Writes vector out in dense format.  If vector is originally sparse, writes out a copy so
+   * that vector remains sparse. Introduced isCreationInterruptedByUser local variable based on which
+   * transaction is aborted.
+   */
+  public void writeToLuceneStream(IndexOutput outputStream, AtomicBoolean isCreationInterruptedByUser) {
     if (isSparse) {
       elementalToSemantic();
     }
@@ -805,7 +816,7 @@ public class BinaryVector implements Vector {
   /**
    * Writes vector out to object output stream.  Converts to dense format if necessary. Truncates to length k.
    */
-  public void writeToLuceneStream(IndexOutput outputStream, int k, AtomicBoolean... isCreationInterruptedByUser) {
+  public void writeToLuceneStream(IndexOutput outputStream, int k) {
     if (isSparse) {
       elementalToSemantic();
     }
@@ -813,7 +824,6 @@ public class BinaryVector implements Vector {
 
     for (int i = 0; i < k/64; i++) {
       try {
-        checkAbortedAndThrowExceptionIfNeeded(isCreationInterruptedByUser);
         outputStream.writeLong(bitArray[i]);
       } catch (IOException e) {
         logger.severe("Couldn't write binary vector to lucene output stream.");
