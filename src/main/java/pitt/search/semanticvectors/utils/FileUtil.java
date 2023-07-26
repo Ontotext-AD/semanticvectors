@@ -10,7 +10,8 @@ import java.io.File;
  */
 public class FileUtil {
 
-  private static final long HALF_GB = 512 * 1024 * 1024;
+  private static final long HALF_GB = 512L * 1024 * 1024;
+  private static final long FIVE_GB = 5L * 1024 * 1024 * 1024;
 
   /**
    * Check the available disk space and fail with exception id the free space is less than half gigabyte.
@@ -18,10 +19,12 @@ public class FileUtil {
    * @param location the location to check.
    */
   public static void checkDiskSpace(File location) {
-    long usableSpace = location.getUsableSpace();
-    long freeSpace = location.getFreeSpace();
-    if (HALF_GB > usableSpace || HALF_GB > freeSpace) {
+    long freeSpace = Math.min(location.getUsableSpace(), location.getFreeSpace());
+    if (HALF_GB > freeSpace) {
       throw new NoDiskSpaceException("Insufficient disk space at " + location);
+    }
+    if (FIVE_GB > freeSpace) {
+      VerbatimLogger.warning("The location " + location + " is running ouf of disk space with remaining " + freeSpace + " bytes");
     }
   }
 
