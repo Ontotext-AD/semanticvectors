@@ -43,6 +43,7 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
+import pitt.search.semanticvectors.utils.FileUtil;
 import pitt.search.semanticvectors.utils.VerbatimLogger;
 import pitt.search.semanticvectors.vectors.Vector;
 import pitt.search.semanticvectors.vectors.VectorFactory;
@@ -143,6 +144,7 @@ public class IncrementalTermVectors implements VectorStore {
       /* output progress counter */
       if (( dc % 10000 == 0 ) || ( dc < 10000 && dc % 1000 == 0 )) {
         VerbatimLogger.info(dc + " ... ");
+        FileUtil.checkDiskSpace(vectorFile.getParentFile());
       }
 
       Vector docVector = null;

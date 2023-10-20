@@ -47,6 +47,7 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
+import pitt.search.semanticvectors.utils.FileUtil;
 import pitt.search.semanticvectors.utils.VerbatimLogger;
 import pitt.search.semanticvectors.vectors.Vector;
 import pitt.search.semanticvectors.vectors.VectorFactory;
@@ -117,6 +118,7 @@ public class IncrementalDocVectors {
       // Output progress counter.
       if ((dc > 0) && ((dc % 10000 == 0) || (dc < 10000 && dc % 1000 == 0))) {
         VerbatimLogger.info("Processed " + dc + " documents ... ");
+        FileUtil.checkDiskSpace(vectorFile.getParentFile());
       }
 
       // Get filename and path to be used as document vector ID, defaulting to doc number only if
