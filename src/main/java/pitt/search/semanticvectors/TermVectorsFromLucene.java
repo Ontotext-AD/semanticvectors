@@ -37,6 +37,7 @@ package pitt.search.semanticvectors;
 
 import java.io.IOException;
 import java.util.Enumeration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,6 +46,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
+import org.eclipse.rdf4j.query.QueryInterruptedException;
 
 import pitt.search.semanticvectors.utils.VerbatimLogger;
 import pitt.search.semanticvectors.vectors.Vector;
@@ -84,23 +86,29 @@ public class TermVectorsFromLucene {
 
   /**
    * Creates term vectors from a Lucene index.
-   * 
+   *
    * @param elementalDocVectors The store of elemental document vectors. Null
    * is an acceptable value, in which case the constructor will populate
    * this store. If non-null, the identifiers must correspond to the Lucene doc numbers.
    * @throws IOException if resources on disk cannot be opened.
    */
   public static TermVectorsFromLucene createTermVectorsFromLucene(
-      FlagConfig flagConfig, VectorStore elementalDocVectors)
+          FlagConfig flagConfig, VectorStore elementalDocVectors)
+          throws IOException, RuntimeException {
+    return createTermVectorsFromLucene(flagConfig, elementalDocVectors, new AtomicBoolean());
+  }
+  
+  public static TermVectorsFromLucene createTermVectorsFromLucene(
+      FlagConfig flagConfig, VectorStore elementalDocVectors, AtomicBoolean isCreationInterruptedByUser)
           throws IOException, RuntimeException {
     TermVectorsFromLucene vectorStore = new TermVectorsFromLucene(flagConfig);
     vectorStore.elementalDocVectors = elementalDocVectors;
-    vectorStore.createTermVectorsFromLuceneImpl();
+    vectorStore.createTermVectorsFromLuceneImpl(isCreationInterruptedByUser);
     vectorStore.luceneUtils.closeLuceneDir();
     return vectorStore;
   }
 
-  private void createTermVectorsFromLuceneImpl() throws IOException {
+  private void createTermVectorsFromLuceneImpl(AtomicBoolean isCreationInterruptedByUser) throws IOException {
     // Check that elemental doc vectors is the right size.
     if (this.elementalDocVectors != null) {
       logger.info("Reusing basic doc vectors; number of documents: "
@@ -117,11 +125,11 @@ public class TermVectorsFromLucene {
       this.elementalDocVectors = new ElementalVectorStore(flagConfig);
     }
 
-    trainTermVectors();
+    trainTermVectors(isCreationInterruptedByUser);
   }
 
   // Training method for term vectors.
-  private void trainTermVectors() throws IOException {
+  private void trainTermVectors(AtomicBoolean isCreationInterruptedByUser) throws IOException {
     this.termVectors = new VectorStoreRAM(flagConfig);
     // Iterate through an enumeration of terms and create termVector table.
     VerbatimLogger.log(Level.INFO, "Creating semantic term vectors ...\n");
@@ -142,6 +150,9 @@ public class TermVectorsFromLucene {
       TermsEnum terms = this.luceneUtils.getTermsForField(fieldName).iterator();
       BytesRef bytes;
       while ((bytes = terms.next()) != null) {
+        if (isCreationInterruptedByUser.get()) {
+          throw new QueryInterruptedException("Transaction was aborted by the user");
+        }
         // Output progress counter.
         if (( tc % 10000 == 0 ) || ( tc < 10000 && tc % 1000 == 0 )) {
           VerbatimLogger.info("Processed " + tc + " terms ... ");

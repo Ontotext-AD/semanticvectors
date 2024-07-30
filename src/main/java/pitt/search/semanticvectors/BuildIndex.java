@@ -39,6 +39,7 @@ import pitt.search.semanticvectors.utils.VerbatimLogger;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 /**
@@ -79,10 +80,10 @@ public class BuildIndex {
 			throw e;
 		}
 
-		buildIndex(flagConfig);
+		buildIndex(flagConfig, new AtomicBoolean());
 	}
 
-	public static boolean buildIndex(FlagConfig flagConfig) throws IOException {
+	public static boolean buildIndex(FlagConfig flagConfig, AtomicBoolean isCreationInterruptedByUser) throws IOException {
 		if (flagConfig.luceneindexpath().isEmpty()) {
 			throw (new IllegalArgumentException("-luceneindexpath must be set."));
 		}
@@ -119,7 +120,7 @@ public class BuildIndex {
 							"Loaded %d document vectors to use as elemental vectors.\n", initialDocVectors.getNumVectors()));
 				}
 				VerbatimLogger.info("Creating term vectors as superpositions of elemental document vectors ... \n");
-				termVectorIndexer = TermVectorsFromLucene.createTermVectorsFromLucene(flagConfig, initialDocVectors);
+				termVectorIndexer = TermVectorsFromLucene.createTermVectorsFromLucene(flagConfig, initialDocVectors, isCreationInterruptedByUser);
 			}
 
 			// Should happen inside the loops ... I think. This has become messy. TODO: cleanup.
@@ -130,7 +131,7 @@ public class BuildIndex {
 			switch (flagConfig.docindexing()) {
 				case INCREMENTAL:
 					IncrementalDocVectors.createIncrementalDocVectors(
-							termVectorIndexer.getSemanticTermVectors(), flagConfig, luceneUtils);
+							termVectorIndexer.getSemanticTermVectors(), flagConfig, luceneUtils, isCreationInterruptedByUser);
 					IncrementalTermVectors itermVectors;
 
 					for (int i = 1; i < flagConfig.trainingcycles(); ++i) {
@@ -141,7 +142,7 @@ public class BuildIndex {
 										flagConfig.termvectorsfile() + flagConfig.trainingcycles(), flagConfig),
 								flagConfig, itermVectors);
 
-						IncrementalDocVectors.createIncrementalDocVectors(itermVectors, flagConfig, luceneUtils);
+						IncrementalDocVectors.createIncrementalDocVectors(itermVectors, flagConfig, luceneUtils, isCreationInterruptedByUser);
 					}
 					if (flagConfig.trainingcycles() > 0) {
 						VectorStoreUtils.renameTrainedVectorsFile(flagConfig.termvectorsfile(), flagConfig);
@@ -152,7 +153,7 @@ public class BuildIndex {
 					DocVectors docVectors = new DocVectors(termVectorIndexer.getSemanticTermVectors(), flagConfig, luceneUtils);
 					for (int i = 1; i < flagConfig.trainingcycles(); ++i) {
 						VerbatimLogger.info("\nRetraining with learned document vectors ...");
-						termVectorIndexer = TermVectorsFromLucene.createTermVectorsFromLucene(flagConfig, docVectors);
+						termVectorIndexer = TermVectorsFromLucene.createTermVectorsFromLucene(flagConfig, docVectors, isCreationInterruptedByUser);
 						docVectors = new DocVectors(termVectorIndexer.getSemanticTermVectors(), flagConfig, luceneUtils);
 					}
 

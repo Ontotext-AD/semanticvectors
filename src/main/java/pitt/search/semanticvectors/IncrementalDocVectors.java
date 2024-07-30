@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 import org.apache.lucene.index.*;
@@ -46,6 +47,7 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
+import org.eclipse.rdf4j.query.QueryInterruptedException;
 
 import pitt.search.semanticvectors.utils.FileUtil;
 import pitt.search.semanticvectors.utils.VerbatimLogger;
@@ -58,7 +60,7 @@ import pitt.search.semanticvectors.vectors.VectorFactory;
  * The training procedure still iterates through all the documents in the Lucene index,
  * so currently this class is purely an optimization, not an implementation of
  * incremental indexing in the sense of being able to add extra documents later after
- * an initial model has been built.   
+ * an initial model has been built.
  *
  * @author Trevor Cohen, Dominic Widdows
  */
@@ -85,16 +87,22 @@ public class IncrementalDocVectors {
    * @param luceneUtils Lucene Utils used for reading Lucene index
    */
   public static void createIncrementalDocVectors(
-      VectorStore termVectorData, FlagConfig flagConfig, LuceneUtils luceneUtils)
+          VectorStore termVectorData, FlagConfig flagConfig, LuceneUtils luceneUtils)throws IOException {
+    createIncrementalDocVectors(termVectorData, flagConfig, luceneUtils, new AtomicBoolean());
+  }
+  
+  
+  public static void createIncrementalDocVectors(
+      VectorStore termVectorData, FlagConfig flagConfig, LuceneUtils luceneUtils, AtomicBoolean isCreationInterruptedByUser)
       throws IOException {
     IncrementalDocVectors incrementalDocVectors = new IncrementalDocVectors();
     incrementalDocVectors.flagConfig = flagConfig;
     incrementalDocVectors.termVectorData = termVectorData;
     incrementalDocVectors.luceneUtils = luceneUtils;
-    incrementalDocVectors.trainIncrementalDocVectors();
+    incrementalDocVectors.trainIncrementalDocVectors(isCreationInterruptedByUser);
   }
 
-  private void trainIncrementalDocVectors() throws IOException {
+  private void trainIncrementalDocVectors(AtomicBoolean isCreationInterruptedByUser) throws IOException {
     int numdocs = luceneUtils.getNumDocs();
 
     // Open file and write headers.
@@ -115,6 +123,9 @@ public class IncrementalDocVectors {
 
     // Iterate through documents.
     for (int dc = 0; dc < numdocs; dc++) {
+      if (isCreationInterruptedByUser.get()) {
+        throw new QueryInterruptedException("Transaction was aborted by the user");
+      }
       // Output progress counter.
       if ((dc > 0) && ((dc % 10000 == 0) || (dc < 10000 && dc % 1000 == 0))) {
         VerbatimLogger.info("Processed " + dc + " documents ... ");
